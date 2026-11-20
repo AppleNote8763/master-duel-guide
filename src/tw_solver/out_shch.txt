@@ -1,0 +1,64 @@
+.. 100000 100237 237 3
+.. 200000 200050 50 4
+.. 300000 300089 89 6
+.. 400000 400142 142 9
+.. 500000 500173 173 11
+.. 600000 600191 191 13
+.. 700000 700135 135 15
+.. 800000 800139 139 17
+.. 900000 900081 81 20
+.. 1000000 1000138 138 22
+.. 1100000 1100143 143 24
+.. 1200000 1200143 143 27
+.. 1300000 1300104 104 29
+.. 1400000 1400211 211 32
+.. 1500000 1500108 108 35
+.. 1600000 1600073 73 38
+.. 1700000 1700115 115 41
+.. 1800000 1800255 255 44
+.. 1900000 1900161 161 47
+.. 2000000 2000063 63 50
+.. 2100000 2100105 105 52
+.. 2200000 2200168 168 55
+.. 2300000 2300112 112 57
+.. 2400000 2400072 72 60
+.. 2500000 2500059 59 63
+GOAL FOUND (True, True, True, False)
+shch xyzSHY True expanded 2523572 seen 2523837 exhausted False
+ 시져/그리폰/아바오/써니 = (True, True, True, False)
+ 시져/그리폰/아바오/써니 = (True, True, False, False)
+ 시져/그리폰/아바오/써니 = (True, False, True, True)
+ 시져/그리폰/아바오/써니 = (True, False, True, False)
+ 시져/그리폰/아바오/써니 = (True, False, False, True)
+ 시져/그리폰/아바오/써니 = (True, False, False, False)
+ 시져/그리폰/아바오/써니 = (False, True, True, True)
+ 시져/그리폰/아바오/써니 = (False, True, True, False)
+ 시져/그리폰/아바오/써니 = (False, True, False, True)
+ 시져/그리폰/아바오/써니 = (False, True, False, False)
+ 시져/그리폰/아바오/써니 = (False, False, True, True)
+ 시져/그리폰/아바오/써니 = (False, False, True, False)
+ 시져/그리폰/아바오/써니 = (False, False, False, True)
+ 시져/그리폰/아바오/써니 = (False, False, False, False)
+PATH
+   1 NS FRO
+   2 LINK DEAL <- FRO
+   3 딜: 덱의 SW 묘지로
+   4 스위트 묘지 효과: 특소
+   5 LINK EL <- DEAL+SW
+   6 E리일라: 묘지의 DEAL 특소
+   7 LINK EK <- DEAL+EL
+   8 E키스킬: 묘지의 EL 특소
+   9 LINK SUN <- EK+EL
+   10 써니 릴리스: EK, SW 특소
+   11 LINK SEQ <- EK+SW
+   12 세퀜티아: 묘지 DEAL+SUN 되돌려 융합 / 라크리모사: EK 특소
+   13 LINK REQ <- FLA
+   14 레퀴엠 릴리스: deck의 LCT 특소 / 홍루: 덱의 ENG 묘지로
+   15 마새데 묘지 효과: REQ 되돌리고 특소
+   16 LINK YA <- ENG+LCT / 야마 서치 SH(덱)
+   17 LINK AB <- SEQ+YA
+   18 아바오: 1장 버리고 자신 제외, 묘지의 EL 특소 / E리일라: CHs 파괴
+   19 LINK GRY <- EK+EL / 그리폰: 1장 버리고 CH 세트
+   20 SHY 효과(gy): CHs 파괴하고 특소
+   21 XYZ CAE <- SH+SHY*
+FINAL ((), 2, ('ENG', 'LL', 'LUR', 'TRA', 'TRA'), ('CAE', 'GRY'), (), ('CH', 'EK', 'EL', 'ENG', 'FLA', 'FRO', 'LCT', 'SEQ', 'SW'), ('YA',), ('DEAL', 'RA', 'REQ', 'SUN'), frozenset({'EL2', 'EK2', 'SW2', 'AB1', 'NS', 'YA2', 'GRY1', 'FLA1', 'SHset', 'SHY2', 'SUN1', 'CH2', 'REQ1', 'DEALls', 'SEQ1', 'YA1', 'LCT1', 'EL1', 'ENG3', 'REQss', 'DEAL1'}), True)

@@ -1,0 +1,59 @@
+.. 100000 100073 73 2
+.. 200000 200079 79 5
+PATH (True, False, True, True)
+   1 NS FRO
+   2 LINK DEAL <- FRO
+   3 딜: 덱의 SW 묘지로
+   4 스위트 묘지 효과: 특소
+   5 LINK EL <- DEAL+SW
+   6 E리일라: 묘지의 DEAL 특소
+   7 LINK EK <- DEAL+EL
+   8 E키스킬: 묘지의 SW 특소
+   9 LINK REQ <- EK
+   10 레퀴엠 릴리스: deck의 ENG 특소
+   11 LINK SEQ <- ENG+SW
+   12 세퀜티아: 묘지 DEAL+REQ 되돌려 융합 / 라크리모사: EK 특소
+   13 LINK SUN <- EK+SEQ
+   14 써니 릴리스: EK, EL 특소
+   15 마새데 묘지 효과: SEQ 되돌리고 특소
+   16 XYZ CAE <- ENG+FLA
+   17 LINK AB <- EK+EL
+   18 아바오: 1장 버리고 자신 제외, 묘지의 SUN 특소
+FINAL ((), 3, ('ENG', 'LCT', 'LL', 'LUR', 'SHY', 'TRA', 'TRA'), ('CAE', 'SUN'), (), ('EK', 'EL', 'FRO', 'SW'), (), ('DEAL', 'GRY', 'RA', 'REQ', 'SEQ', 'YA'), frozenset({'REQss', 'DEALls', 'AB1', 'FLA1', 'EK2', 'EL2', 'REQ1', 'NS', 'ENG3', 'SEQ1', 'SUN1', 'SW2', 'DEAL1'}), True)
+.. 300000 300103 103 7
+PATH (False, True, True, True)
+   1 NS FRO
+   2 LINK DEAL <- FRO
+   3 딜: 덱의 SW 묘지로
+   4 스위트 묘지 효과: 특소
+   5 LINK EL <- DEAL+SW
+   6 E리일라: 묘지의 DEAL 특소
+   7 LINK EK <- DEAL+EL
+   8 E키스킬: 묘지의 SW 특소
+   9 LINK REQ <- EK
+   10 레퀴엠 릴리스: deck의 LCT 특소 / 홍루: 덱의 ENG 묘지로
+   11 마새데 묘지 효과: REQ 되돌리고 특소
+   12 LINK SEQ <- LCT+SW
+   13 세퀜티아: 묘지 DEAL+LCT 되돌려 융합 / 라크리모사: EK 특소
+   14 LINK AB <- EK+SEQ
+   15 아바오: 1장 버리고 자신 제외, 묘지의 EL 특소
+   16 SEQ 묘지에서 장착
+   17 LINK YA <- ENG+FLA / 야마 서치 SHY(덱)
+   18 LINK SUN <- EL+YA
+   19 써니 릴리스: EK, EL 특소 / E리일라: SEQe 파괴
+   20 LINK GRY <- EK+EL
+FINAL (('SHY',), 3, ('ENG', 'ENG', 'LCT', 'LL', 'LUR', 'TRA', 'TRA'), ('GRY', 'SUN'), (), ('EK', 'EL', 'FLA', 'FRO', 'SEQ', 'SW'), ('YA',), ('CAE', 'DEAL', 'RA', 'REQ'), frozenset({'REQss', 'DEALls', 'AB1', 'EL1', 'REQ1', 'EL2', 'NS', 'SEQ2', 'YA1', 'ENG3', 'FLA1', 'DEAL1', 'YA2', 'EK2', 'FLAg', 'SEQ1', 'SUN1', 'SW2', 'LCT1'}), True)
+base xyzSHY True expanded 321945 seen 322060 exhausted False
+ 시져/그리폰/아바오/써니 = (True, True, False, False)
+ 시져/그리폰/아바오/써니 = (True, False, True, True)
+ 시져/그리폰/아바오/써니 = (True, False, True, False)
+ 시져/그리폰/아바오/써니 = (True, False, False, True)
+ 시져/그리폰/아바오/써니 = (True, False, False, False)
+ 시져/그리폰/아바오/써니 = (False, True, True, True)
+ 시져/그리폰/아바오/써니 = (False, True, True, False)
+ 시져/그리폰/아바오/써니 = (False, True, False, True)
+ 시져/그리폰/아바오/써니 = (False, True, False, False)
+ 시져/그리폰/아바오/써니 = (False, False, True, True)
+ 시져/그리폰/아바오/써니 = (False, False, True, False)
+ 시져/그리폰/아바오/써니 = (False, False, False, True)
+ 시져/그리폰/아바오/써니 = (False, False, False, False)
