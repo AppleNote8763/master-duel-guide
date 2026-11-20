@@ -1,0 +1,75 @@
+name: 결과 옮기기와 빠진 조합 다시 계산
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['batch/finish.txt']
+permissions:
+  contents: write
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: 결과를 전용 브랜치로 옮기기
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash batch/data-put.sh node batch/migrate.js site/batch pub/batch
+      - name: 본체 저장소에서 결과 파일 지우기
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if [ -d site/batch ]; then git rm -rq site/batch && git commit -qm "계산 결과를 data 브랜치로 옮김" && for i in 1 2 3; do git pull -q --rebase origin main && git push -q origin HEAD:main && break; sleep 5; done; fi
+  redo:
+    needs: migrate
+    if: ${{ !cancelled() && needs.migrate.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      matrix:
+        part: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: 덜 끝났거나 빠진 조합만 다시 (한 대에 하나씩, 메모리 크게)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          bash batch/data-get.sh
+          mkdir -p out
+          HEAP=13000 node batch/batch.js ${{ matrix.part }} 40 out/r${{ matrix.part }}.json.gz --redo databr/batch
+      - uses: actions/upload-artifact@v4
+        with:
+          name: redo-${{ matrix.part }}
+          path: out/*.json.gz
+          retention-days: 7
+  redo-collect:
+    needs: redo
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          path: parts
+          pattern: redo-*
+          merge-multiple: true
+      - name: 기존 조각에 합쳐 올리기
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash batch/data-put.sh node batch/merge.js parts pub/batch

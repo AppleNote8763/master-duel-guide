@@ -11,36 +11,37 @@ concurrency:
   group: batch
   cancel-in-progress: true
 jobs:
-  cancel-old:
+  start-base:
     runs-on: ubuntu-latest
     steps:
-      - name: 예전 조건으로 돌던 작업을 멈추고, 지금 덱 구성 계산을 새 조건으로 시작
+      - name: 지금 덱 구성 계산도 같이 시작
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          for wf in redo.yml base.yml; do for st in in_progress queued; do
-            gh run list -R "$GITHUB_REPOSITORY" --workflow $wf --status $st --json databaseId -q '.[].databaseId' | while read id; do gh run cancel -R "$GITHUB_REPOSITORY" "$id" || true; done
-          done; done
-          sleep 20
+          for st in in_progress queued; do
+            gh run list -R "$GITHUB_REPOSITORY" --workflow base.yml --status $st --json databaseId -q '.[].databaseId' | while read id; do gh run cancel -R "$GITHUB_REPOSITORY" "$id" || true; done
+          done
+          sleep 15
           gh workflow run base.yml -R "$GITHUB_REPOSITORY" --ref main
   solve:
-    needs: cancel-old
     runs-on: ubuntu-latest
     timeout-minutes: 350
     strategy:
       fail-fast: false
       matrix:
-        part: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39]
+        part: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59]
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: 계산 (한 대에서 조각 3개 동시)
+      - name: 계산 (한 대에서 조각 2개 동시)
         run: |
           mkdir -p out
-          for k in 0 1 2; do
-            s=$(( ${{ matrix.part }} * 3 + k ))
+          for k in 0 1; do
+            s=$(( ${{ matrix.part }} * 2 + k ))
             node batch/batch.js $s 120 out/p$(printf '%03d' $s).json.gz > out/log$s.txt 2>&1 &
           done
           wait
@@ -53,7 +54,7 @@ jobs:
           retention-days: 7
   collect:
     needs: solve
-    if: always()
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -67,23 +68,19 @@ jobs:
           path: parts
           pattern: part-*
           merge-multiple: true
-      - name: 사이트 폴더로 옮기고 올리기
-        run: |
-          mkdir -p site/batch
-          node batch/collect.js parts site/batch
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add site/batch
-          git diff --cached --quiet || git commit -m "일괄 계산 결과 갱신"
-          for i in 1 2 3; do git pull --rebase origin main && git push origin HEAD:main && break; sleep 5; done
+      - name: 결과 전용 브랜치에 올리기
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash batch/data-put.sh node batch/collect.js parts pub/batch gh
   redo:
     needs: collect
+    if: ${{ !cancelled() && needs.collect.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 350
     strategy:
       fail-fast: false
       matrix:
-        part: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
+        part: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -91,10 +88,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: 덜 끝난 조합만 다시 (한 대에 하나씩, 메모리 크게)
+      - name: 덜 끝났거나 빠진 조합만 다시 (한 대에 하나씩, 메모리 크게)
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
+          bash batch/data-get.sh
           mkdir -p out
-          HEAP=13000 node batch/batch.js ${{ matrix.part }} 20 out/r${{ matrix.part }}.json.gz --redo site/batch
+          HEAP=13000 node batch/batch.js ${{ matrix.part }} 40 out/r${{ matrix.part }}.json.gz --redo databr/batch
       - uses: actions/upload-artifact@v4
         with:
           name: redo-${{ matrix.part }}
@@ -102,7 +102,7 @@ jobs:
           retention-days: 7
   redo-collect:
     needs: redo
-    if: always()
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -117,15 +117,6 @@ jobs:
           pattern: redo-*
           merge-multiple: true
       - name: 기존 조각에 합쳐 올리기
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          for i in 1 2 3 4; do
-            git fetch origin main && git reset --hard origin/main
-            node batch/merge.js parts site/batch
-            git add -A site/batch
-            git diff --cached --quiet && break
-            git commit -m "덜 끝난 조합 다시 계산한 결과 반영"
-            git push origin HEAD:main && break
-            sleep 7
-          done
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash batch/data-put.sh node batch/merge.js parts pub/batch

@@ -4,6 +4,7 @@ const fs = require('fs'), path = require('path'), zlib = require('zlib');
 const [inDir, outDir] = [process.argv[2], process.argv[3]];
 const rd = f => JSON.parse(zlib.gunzipSync(fs.readFileSync(f)));
 const files = fs.readdirSync(outDir).filter(x => /^gh-.*-p\d+\.gz$/.test(x)).sort();
+if (!files.length) { console.log('기존 조각이 없음'); process.exit(0); }
 const m0 = files[0].match(/^gh-(.*)-p(\d+)\.gz$/), svv = m0[1], pad = m0[2].length;
 const nsh = Math.max(...files.map(f => +f.match(/-p(\d+)\.gz$/)[1])) + 1;
 const byFile = {}; let n = 0;
