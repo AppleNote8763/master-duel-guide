@@ -499,7 +499,7 @@ function evaluate0(s) {
 // ---------- 탐색 ----------
 let NOSS = {}; // 비용으로는 보내지만 내 턴에 소환하지는 않는 엑스트라 카드
 let RES = {}; // 전개 중에는 쓰지 않지만 엑스트라 덱에는 들어 있는 카드 (상대 턴 방해 계산에만 반영)
-function evalWith(s, avail) { const t = clone(s); t.extra = Object.assign({}, avail); const r0 = RES; RES = {}; try { return evaluate(t); } finally { RES = r0; } }
+function evalWith(s, avail, deckOver) { const t = clone(s); t.extra = Object.assign({}, avail); if (deckOver) Object.assign(t.deck, deckOver); const r0 = RES; RES = {}; try { return evaluate(t); } finally { RES = r0; } }
 function initState(hand, main, extra, ban, nos) {
   NOSS = {}; for (const n of (nos || [])) if (CODE[n]) NOSS[CODE[n]] = 1;
   const deck = {}, ex = {};
@@ -515,7 +515,8 @@ function boardKey(s) { return s.field.map(m => m.c).sort().join(',') + '|' + s.s
 function search(hand, main, extra, opts) {
   opts = opts || {}; const maxStates = opts.maxStates || 400000, maxMs = opts.maxMs || 60000, t0 = Date.now();
   const s0 = initState(hand, main, extra, opts.ban, opts.nos); const X0 = Object.assign({}, s0.extra), grp = !!opts.group;
-  const usedOf = s => { const u = []; for (const c in X0) { const d = X0[c] - (s.extra[c] || 0); for (let i = 0; i < d; i++) u.push(c); } return u.sort(); }; if (!s0) return { error: '손패의 카드가 덱에 없습니다', results: [] };
+  const M0 = {}; for (const n of (opts.optMain || [])) { const c = CODE[n]; if (c) M0[c] = (s0.deck[c] || 0) + s0.hand.filter(x => x === c).length; }
+  const usedOf = s => { const u = []; for (const c in X0) { const d = X0[c] - (s.extra[c] || 0); for (let i = 0; i < d; i++) u.push(c); } for (const c in M0) { const d = M0[c] - (s.deck[c] || 0); for (let i = 0; i < d; i++) u.push(c); } return u.sort(); }; if (!s0) return { error: '손패의 카드가 덱에 없습니다', results: [] };
   const NP = new Int32Array(maxStates + 2), NM = new Uint16Array(maxStates + 2); let nn = 1; // 부모 포인터 + 부모의 moves() 안에서 몇 번째 수인지
   let frontier = [{ s: s0, id: 0 }]; const seen = new Set([hkey(s0)]); const boards = new Map(); let done = true, depth = 0;
   const consider = (s, id, d) => {
@@ -567,7 +568,7 @@ function replay(hand, main, extra, opts, idx, availOf) {
   const s0 = initState(hand, main, extra, opts.ban, opts.nos); if (!s0) return null;
   const path = []; let cur = s0; for (const mi of idx) { const m = moves(cur)[mi]; if (!m) return null; cur = m.s; if (m.title !== null) path.push({ title: m.title, act: m.act, desc: m.desc, g: m.g, s: m.s }); }
   if (cur.pend.length) return null;
-  const ep = endPhase(cur); const E = ep.s; const ev = availOf ? evalWith(E, availOf(E, s0)) : evaluate(E);
+  const ep = endPhase(cur); const E = ep.s; let ev; if (availOf) { const av = availOf(E, s0); ev = evalWith(E, av.x, av.d); } else ev = evaluate(E);
   const g = new Set(path.map(p => p.g)); const kind = g.has('d') && g.has('b') ? 'mix' : g.has('b') ? 'brand' : 'dt';
   return { key: boardKey(E) + '#' + idx.join('.'), score: ev.length, items: ev, kind, steps: path, end: ep.log, hand: E.hand.length, handCards: E.hand.map(c => N[c]),
     field: E.field.map(m => N[m.c]), set: E.st.map(m => N[m.c]), nsteps: path.length, final: E, start: s0 };
