@@ -6,11 +6,23 @@ on:
     paths: ['batch/run.txt']
 permissions:
   contents: write
+  actions: write
 concurrency:
   group: batch
   cancel-in-progress: true
 jobs:
+  cancel-old:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 예전 조건으로 돌던 다시 계산 작업 멈추기
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for st in in_progress queued; do
+            gh run list -R "$GITHUB_REPOSITORY" --workflow redo.yml --status $st --json databaseId -q '.[].databaseId' | while read id; do gh run cancel -R "$GITHUB_REPOSITORY" "$id" || true; done
+          done
   solve:
+    needs: cancel-old
     runs-on: ubuntu-latest
     timeout-minutes: 350
     strategy:
@@ -51,6 +63,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           path: parts
+          pattern: part-*
           merge-multiple: true
       - name: 사이트 폴더로 옮기고 올리기
         run: |
@@ -60,4 +73,57 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add site/batch
           git diff --cached --quiet || git commit -m "일괄 계산 결과 갱신"
-          git push origin HEAD:main
+          for i in 1 2 3; do git pull --rebase origin main && git push origin HEAD:main && break; sleep 5; done
+  redo:
+    needs: collect
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      matrix:
+        part: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: 덜 끝난 조합만 다시 (한 대에 하나씩, 메모리 크게)
+        run: |
+          mkdir -p out
+          HEAP=13000 node batch/batch.js ${{ matrix.part }} 20 out/r${{ matrix.part }}.json.gz --redo site/batch
+      - uses: actions/upload-artifact@v4
+        with:
+          name: redo-${{ matrix.part }}
+          path: out/*.json.gz
+          retention-days: 7
+  redo-collect:
+    needs: redo
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          path: parts
+          pattern: redo-*
+          merge-multiple: true
+      - name: 기존 조각에 합쳐 올리기
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for i in 1 2 3 4; do
+            git fetch origin main && git reset --hard origin/main
+            node batch/merge.js parts site/batch
+            git add -A site/batch
+            git diff --cached --quiet && break
+            git commit -m "덜 끝난 조합 다시 계산한 결과 반영"
+            git push origin HEAD:main && break
+            sleep 7
+          done

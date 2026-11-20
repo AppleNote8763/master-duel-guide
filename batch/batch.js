@@ -4,7 +4,8 @@ const fs = require('fs'), path = require('path'), zlib = require('zlib');
 const engPath = path.join(__dirname, '..', 'src', 'dtsolve', 'engine.js');
 const SRC = fs.readFileSync(engPath, 'utf8');
 const DTE = require(engPath);
-const SVV = (() => { let h = 0; for (let i = 0; i < SRC.length; i++) h = (Math.imul(h, 31) + SRC.charCodeAt(i)) | 0; return (h >>> 0).toString(36); })();
+// 사이트(ui.js)의 SVV·SVREV와 같은 값. 탐색기를 고쳐도 기존 수의 순서가 유지되면 SVV는 그대로 둔다.
+const SVV = '14didan', REV = 2;
 const [shard, nsh, out, cfgFile] = [+process.argv[2] || 0, +process.argv[3] || 1, process.argv[4] || 'out.json.gz', (process.argv[5] && !process.argv[5].startsWith('--') ? process.argv[5] : null) || path.join(__dirname, 'config.json')];
 const CF = JSON.parse(fs.readFileSync(cfgFile, 'utf8'));
 const f = o => Object.keys(o).filter(n => o[n] > 0 && DTE.CODE[n]).sort().map(n => DTE.CODE[n] + o[n]).join(',');
@@ -45,7 +46,7 @@ for (let k = 0; k < mine.length; k++) {
   if (!r) { r = runOne(gi, 180, 3000000); lim = 180; note = ' · 메모리 부족으로 줄여서 재시도'; }
   const old = prev['B|' + cfg + '|' + svHK(hand)]; if (old && r && !r.error && !r.done && r.states <= old.states) { console.log('유지', ch.join(' + ')); continue; }
   if (!r || r.error) { console.log('skip', ch.join(' + '), r ? r.error : '실패'); continue; }
-  items.push(['B|' + cfg + '|' + svHK(hand), { hand: ch, groups: r.groups, complete: r.done, lim, states: r.states, ms: r.ms, gi }]);
+  items.push(['B|' + cfg + '|' + svHK(hand), { hand: ch, groups: r.groups, complete: r.done, lim, states: r.states, ms: r.ms, gi, rev: REV }]);
   const best = {}; for (const x of r.groups) { const u = x.u.join(','); if (!(best[u] >= x.sc)) best[u] = x.sc; }
   hands[svHK(hand)] = { h: ch, g: Object.entries(best), c: r.done, lim };
   console.log(`[${shard}/${nsh}] ${k + 1}/${mine.length} ${ch.join(' + ')} · ${r.states} 국면 · ${(r.ms / 1000).toFixed(1)}s${r.done ? '' : ' · 한도'}${note} · 누적 ${((Date.now() - t0) / 60000).toFixed(1)}분`);

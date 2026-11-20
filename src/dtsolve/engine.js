@@ -365,7 +365,7 @@ function moves(s0) {
       const s = clone(s0); use(s, 'SHR'); rm(s.hand, c); s.gy.push(c); rm(loc === 'hand' ? s.hand : s.gy, 'SHR'); s.field.push({ c: 'SHR', z: freeM(s) });
       push(s, N.SHR + ' 효과 (' + (loc === 'hand' ? '패' : '묘지') + ')', '패의 ' + N[c] + '를 묘지로', '자신을 특수 소환 (필드·묘지에서는 알버스의 낙윤 취급)', 'b'); }
     // 덱에서 보냄 → 자신은 덱 맨 아래로 (패에서 썼다면 1장 드로우: 무엇을 뽑는지는 계산하지 않음)
-    for (const c of ['AZ', 'WD', 'BF', 'FV', 'RET', 'SPI', 'OPN', 'RED']) { if (!((s0.deck[c] || 0) > 0)) continue; if (C[c].k !== 'm' && c !== 'RET') continue;
+    for (const c of ['AZ', 'WD', 'BF', 'FV', 'RET', 'SPI', 'OPN', 'RED']) { if (!((s0.deck[c] || 0) > 0)) continue; // 알버스의 낙윤(하얀 용 포함) 또는 낙인 마법·함정(F&V 포함)
       const s = clone(s0); use(s, 'SHR'); s.deck[c]--; s.gy.push(c); rm(loc === 'hand' ? s.hand : s.gy, 'SHR'); s.deck.SHR = (s.deck.SHR || 0) + 1;
       push(s, N.SHR + ' 효과 (' + (loc === 'hand' ? '패' : '묘지') + ')', '덱의 ' + N[c] + '를 묘지로', '자신은 덱 맨 아래로' + (loc === 'hand' ? ' → 1장 드로우 (뽑는 카드는 계산에 넣지 않음)' : ''), 'b'); }
   }

@@ -16,7 +16,8 @@ for (const name of [...new Set(files.concat(Object.keys(byFile)))].sort()) {
   if (!byFile[name]) { if (o) { list.push(o); tot += o.n; cap += o.cap || 0; } continue; }
   const P = fs.existsSync(fp) ? rd(fp) : { v: 1, svv, when: t, items: [] };
   for (const [k, v] of byFile[name]) { const cfg = k.slice(2, k.lastIndexOf('|')), hk = k.slice(k.lastIndexOf('|') + 1);
-    const i = P.items.findIndex(x => x[0] === k); if (i >= 0) P.items[i] = [k, v]; else P.items.unshift([k, v]);
+    const i = P.items.findIndex(x => x[0] === k); if (i >= 0 && (P.items[i][1].rev || 1) > (v.rev || 1)) continue; // 예전 탐색기 결과로 새 결과를 덮지 않는다
+    if (i >= 0) P.items[i] = [k, v]; else P.items.unshift([k, v]);
     let bi = P.items.find(x => x[0] === 'BI|' + cfg); if (!bi) { bi = ['BI|' + cfg, { hands: {} }]; P.items.push(bi); }
     const best = {}; for (const x of v.groups) { const u = x.u.join(','); if (!(best[u] >= x.sc)) best[u] = x.sc; }
     bi[1].hands[hk] = { h: v.hand, g: Object.entries(best), c: v.complete, lim: v.lim }; }
