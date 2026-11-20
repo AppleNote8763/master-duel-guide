@@ -2,6 +2,10 @@
 (0, eval)(SV_ENGINE);
 const SVBK = 'dt-sv-ban';
 const SVNK = 'dt-sv-nos';
+// 서버에 저장된 일괄 계산의 기준 설정. 처음 여는 기기는 이 설정으로 시작한다.
+const SVDEF = { ban: ['심연룡 알버 레나투스', '혼효하는 믹시아', '초월소환수 아이온'], nos: ['혁언룡 그랑기뇰', '성흔을 먹는 용'] };
+(() => { try { const b = localStorage.getItem('dt-sv-ban'), n = localStorage.getItem('dt-sv-nos'); const eq = (x, a) => x && JSON.stringify(JSON.parse(x).slice().sort()) === JSON.stringify(a.slice().sort());
+  if ((b === null && n === null) || (eq(b, ['심연룡 알버 레나투스', '성흔을 먹는 용', '혼효하는 믹시아', '초월소환수 아이온']) && eq(n, ['혁언룡 그랑기뇰']))) { localStorage.setItem('dt-sv-ban', JSON.stringify(SVDEF.ban)); localStorage.setItem('dt-sv-nos', JSON.stringify(SVDEF.nos)) } } catch (e) { } })();
 const SV = { nos: (() => { try { return JSON.parse(localStorage.getItem(SVNK) || '[]') } catch (e) { return [] } })(), bt: { open: false, n: 3, par: 2, lim: 180, run: false, done: 0, total: 0, cur: [], ws: [], sz: 0, shown: 60 }, bidx: null, bcfg: '', mopen: false, ban: (() => { try { return JSON.parse(localStorage.getItem(SVBK) || '[]') } catch (e) { return [] } })(), nof: [], bopen: false, cached: false, xopen: false, hand: [], lim: 60, res: null, busy: false, flt: 'all', sort: 'score', open: null, prog: '', info: '', w: null, shown: 30 };
 const SVK = 'dt-found-v1';
 const svShort = n => n.replace('드래곤테일 ', '').replace(' 드래곤테일', '').replace('순백의 성녀 ', '').replace('혁의 성녀 ', '').replace('패의 ', '').replace('프레데터 플랜츠 베르테 ', '').replace('The Fallen & The Virtuous', 'F&V');

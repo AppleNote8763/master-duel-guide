@@ -14,13 +14,15 @@ jobs:
   cancel-old:
     runs-on: ubuntu-latest
     steps:
-      - name: 예전 조건으로 돌던 다시 계산 작업 멈추기
+      - name: 예전 조건으로 돌던 작업을 멈추고, 지금 덱 구성 계산을 새 조건으로 시작
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          for st in in_progress queued; do
-            gh run list -R "$GITHUB_REPOSITORY" --workflow redo.yml --status $st --json databaseId -q '.[].databaseId' | while read id; do gh run cancel -R "$GITHUB_REPOSITORY" "$id" || true; done
-          done
+          for wf in redo.yml base.yml; do for st in in_progress queued; do
+            gh run list -R "$GITHUB_REPOSITORY" --workflow $wf --status $st --json databaseId -q '.[].databaseId' | while read id; do gh run cancel -R "$GITHUB_REPOSITORY" "$id" || true; done
+          done; done
+          sleep 20
+          gh workflow run base.yml -R "$GITHUB_REPOSITORY" --ref main
   solve:
     needs: cancel-old
     runs-on: ubuntu-latest
