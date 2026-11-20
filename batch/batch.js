@@ -18,16 +18,26 @@ function svHands(maxN, MM) {
 }
 const all = svHands(CF.maxN, CF.main);
 if (process.argv.includes('--info')) { console.log(JSON.stringify({ svv: SVV, cfg, hands: all.length })); process.exit(0); }
-const mine = all.filter((_, i) => i % nsh === shard);
-const items = [], hands = {}; const t0 = Date.now();
+const { spawnSync } = require('child_process'), os = require('os');
+const MAXS = CF.maxStates || 5000000;
+// 자식 모드: 손패 하나만 계산해 파일로 쓴다 (메모리가 넘쳐 죽어도 나머지 손패는 살린다)
+if (process.argv.includes('--one')) {
+  const i = +process.argv[process.argv.indexOf('--one') + 1], ms = +process.argv[process.argv.indexOf('--one') + 2], st = +process.argv[process.argv.indexOf('--one') + 3], of = process.argv[process.argv.indexOf('--one') + 4];
+  const r = DTE.search(svCanon(all[i]), CF.main, CF.extra, { group: true, optMain: CF.om, maxMs: ms * 1000, maxStates: st, ban: CF.ban, nos: CF.nos });
+  fs.writeFileSync(of, JSON.stringify(r)); process.exit(0);
+}
+const mine = all.map((h, i) => [h, i]).filter((_, i) => i % nsh === shard);
+const items = [], hands = {}; const t0 = Date.now(); const tmp = path.join(os.tmpdir(), 'one-' + shard + '-' + process.pid + '.json');
+const runOne = (i, ms, st) => { try { fs.unlinkSync(tmp); } catch (e) { } const p = spawnSync(process.execPath, ['--max-old-space-size=4800', __filename, String(shard), String(nsh), 'x', cfgFile, '--one', String(i), String(ms), String(st), tmp], { stdio: 'ignore' }); if (p.status !== 0 || !fs.existsSync(tmp)) return null; return JSON.parse(fs.readFileSync(tmp, 'utf8')); };
 for (let k = 0; k < mine.length; k++) {
-  const hand = mine[k], ch = svCanon(hand);
-  const r = DTE.search(ch, CF.main, CF.extra, { group: true, optMain: CF.om, maxMs: CF.lim * 1000, maxStates: 5000000, ban: CF.ban, nos: CF.nos });
-  if (r.error) { console.log('skip', ch.join(' + '), r.error); continue; }
-  items.push(['B|' + cfg + '|' + svHK(hand), { hand: ch, groups: r.groups, complete: r.done, lim: CF.lim, states: r.states, ms: r.ms }]);
+  const [hand, gi] = mine[k], ch = svCanon(hand);
+  let r = runOne(gi, CF.lim, MAXS), lim = CF.lim, note = '';
+  if (!r) { r = runOne(gi, 180, 3000000); lim = 180; note = ' · 메모리 부족으로 줄여서 재시도'; }
+  if (!r || r.error) { console.log('skip', ch.join(' + '), r ? r.error : '실패'); continue; }
+  items.push(['B|' + cfg + '|' + svHK(hand), { hand: ch, groups: r.groups, complete: r.done, lim, states: r.states, ms: r.ms }]);
   const best = {}; for (const x of r.groups) { const u = x.u.join(','); if (!(best[u] >= x.sc)) best[u] = x.sc; }
-  hands[svHK(hand)] = { h: ch, g: Object.entries(best), c: r.done, lim: CF.lim };
-  console.log(`[${shard}/${nsh}] ${k + 1}/${mine.length} ${ch.join(' + ')} · ${r.states} 국면 · ${(r.ms / 1000).toFixed(1)}s${r.done ? '' : ' · 제한'} · 누적 ${((Date.now() - t0) / 60000).toFixed(1)}분`);
+  hands[svHK(hand)] = { h: ch, g: Object.entries(best), c: r.done, lim };
+  console.log(`[${shard}/${nsh}] ${k + 1}/${mine.length} ${ch.join(' + ')} · ${r.states} 국면 · ${(r.ms / 1000).toFixed(1)}s${r.done ? '' : ' · 한도'}${note} · 누적 ${((Date.now() - t0) / 60000).toFixed(1)}분`);
 }
 items.push(['BI|' + cfg, { hands }]);
 fs.writeFileSync(out, zlib.gzipSync(JSON.stringify({ v: 1, svv: SVV, when: Date.now(), items })));
