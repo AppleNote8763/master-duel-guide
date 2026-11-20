@@ -19,7 +19,7 @@ for (const name of [...new Set(files.concat(Object.keys(byFile)))].sort()) {
     const i = P.items.findIndex(x => x[0] === k); if (i >= 0 && (P.items[i][1].rev || 1) > (v.rev || 1)) continue; // 예전 탐색기 결과로 새 결과를 덮지 않는다
     if (i >= 0) P.items[i] = [k, v]; else P.items.unshift([k, v]);
     let bi = P.items.find(x => x[0] === 'BI|' + cfg); if (!bi) { bi = ['BI|' + cfg, { hands: {} }]; P.items.push(bi); }
-    const best = {}; for (const x of v.groups) { const u = x.u.join(','); if (!(best[u] >= x.sc)) best[u] = x.sc; }
+    const best = {}; for (const x of v.groups) { const u = x.u.join(',') + '~' + (x.x || []).join(','); if (!(best[u] >= x.sc)) best[u] = x.sc; }
     bi[1].hands[hk] = { h: v.hand, g: Object.entries(best), c: v.complete, lim: v.lim }; }
   fs.writeFileSync(fp, zlib.gzipSync(JSON.stringify(P)));
   const bs = P.items.filter(x => x[0].startsWith('B|')); list.push({ name, sz: 0, t, n: bs.length, cap: bs.filter(x => !x[1].complete).length }); tot += bs.length; cap += bs.filter(x => !x[1].complete).length;

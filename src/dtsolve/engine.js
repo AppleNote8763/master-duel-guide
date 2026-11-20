@@ -46,8 +46,10 @@ const alp = (c, p) => !!(c.al || (c.al2 && (p.from === 'field' || p.from === 'gy
 // used: 정렬된 문자열 배열, lockF, lock8, noSS, ns, nfx(융합 이외를 엑스트라에서 특소함), fgy(융합 몬스터가 묘지로 감), albgy, titgy, eddb, pend: [..]
 function clone(s) {
   return { hand: s.hand.slice(), deck: Object.assign({}, s.deck), extra: Object.assign({}, s.extra), field: s.field.map(m => ({ c: m.c, z: m.z })), st: s.st.map(m => ({ c: m.c, z: m.z })),
-    gy: s.gy.slice(), ban: s.ban.slice(), used: s.used.slice(), lockF: s.lockF, lock8: s.lock8, noSS: s.noSS, noEX: s.noEX, ns: s.ns, nfx: s.nfx, fgy: s.fgy, albgy: s.albgy, titgy: s.titgy, eddb: s.eddb, pend: s.pend.map(p => Object.assign({}, p)) };
+    gy: s.gy.slice(), ban: s.ban.slice(), xs: s.xs.slice(), used: s.used.slice(), lockF: s.lockF, lock8: s.lock8, noSS: s.noSS, noEX: s.noEX, ns: s.ns, nfx: s.nfx, fgy: s.fgy, albgy: s.albgy, titgy: s.titgy, eddb: s.eddb, pend: s.pend.map(p => Object.assign({}, p)) };
 }
+// xs: 이 턴에 엑스트라 덱에서 필드로 소환한 카드 (비용으로 묘지에 보낸 것과 구분하기 위해 기록)
+function xsAdd(s, c) { if (s.xs.indexOf(c) < 0) { s.xs.push(c); s.xs.sort(); } }
 function hkey(s) { // 53비트 해시 (문자열 키를 그대로 들고 있으면 메모리가 큼)
   const k = key(s); let h1 = 0x811c9dc5, h2 = 0x1b873593;
   for (let i = 0; i < k.length; i++) { const ch = k.charCodeAt(i); h1 = Math.imul(h1 ^ ch, 16777619); h2 = Math.imul(h2 ^ ch, 0x5bd1e995) ^ (h2 >>> 13); }
@@ -56,7 +58,7 @@ function hkey(s) { // 53비트 해시 (문자열 키를 그대로 들고 있으�
 function key(s) {
   const d = Object.keys(s.deck).filter(k => s.deck[k] > 0).sort().map(k => k + s.deck[k]).join(',');
   const e = Object.keys(s.extra).filter(k => s.extra[k] > 0).sort().map(k => k + s.extra[k]).join(',');
-  return [s.hand.slice().sort().join(','), d, e, s.field.map(m => m.c).sort().join(','), s.st.map(m => m.c).sort().join(','), s.gy.slice().sort().join(','), s.ban.slice().sort().join(','), s.used.join(','),
+  return [s.hand.slice().sort().join(','), d, e, s.field.map(m => m.c).sort().join(','), s.st.map(m => m.c).sort().join(','), s.gy.slice().sort().join(','), s.ban.slice().sort().join(','), s.xs.join(','), s.used.join(','),
     (s.lockF ? 'F' : '') + (s.lock8 ? '8' : '') + (s.noSS ? 'N' : '') + (s.noEX ? 'X' : '') + (s.ns ? 'n' : '') + (s.nfx ? 'x' : '') + (s.fgy ? 'g' : '') + (s.albgy ? 'a' : '') + (s.titgy ? 't' : '') + (s.eddb ? 'e' : ''),
     s.pend.map(p => p.t + (p.by || '') + (p.n || '')).join(',')].join('|');
 }
@@ -137,7 +139,7 @@ function doFusion(s, ch, banish) {
     if (banish === 'deck') { if (C[m.c].k === 'x') s.extra[m.c] = (s.extra[m.c] || 0) + 1; else if (!C[m.c].gen) s.deck[m.c] = (s.deck[m.c] || 0) + 1; }
     else if (banish) s.ban.push(m.c); else toGY(s, m.c);
   }
-  s.extra[ch.t]--; s.field.push({ c: ch.t, z: freeX(s) });
+  s.extra[ch.t]--; s.field.push({ c: ch.t, z: freeX(s) }); xsAdd(s, ch.t);
   if (!banish) for (const m of ch.mats) if (C[m.c].dt && C[m.c].k === 'm' && !has(s, m.c + 'S') && !s.pend.some(p => p.t === 'set' && p.by === m.c)) s.pend.push({ t: 'set', by: m.c });
   if (ch.t === 'ART' && !has(s, 'ART1') && ch.hm > 0) s.pend.push({ t: 'ret', n: ch.hm });
   if (ch.t === 'ALB' && !has(s, 'ALB1')) s.pend.push({ t: 'alb' });
@@ -301,7 +303,7 @@ function moves(s0) {
     const seen = {};
     for (let i = 0; i < s0.field.length; i++) for (let j = i + 1; j < s0.field.length; j++) {
       const a = s0.field[i].c, b = s0.field[j].c, k = [a, b].sort().join('+'); if (seen[k]) continue; seen[k] = 1;
-      const s = clone(s0); s.field.splice(j, 1); s.field.splice(i, 1); toGY(s, a); toGY(s, b); s.extra.ANA--; s.field.push({ c: 'ANA', z: 'ER' }); s.nfx = true;
+      const s = clone(s0); s.field.splice(j, 1); s.field.splice(i, 1); toGY(s, a); toGY(s, b); s.extra.ANA--; s.field.push({ c: 'ANA', z: 'ER' }); xsAdd(s, 'ANA'); s.nfx = true;
       push(s, N.ANA + ' 링크 소환', N[a] + ' + ' + N[b] + ' (효과 몬스터 2장)', '엑스트라 몬스터 존', 'b');
     }
   }
@@ -311,7 +313,7 @@ function moves(s0) {
     for (let i = 0; i < s0.field.length; i++) for (let j = 0; j < s0.field.length; j++) {
       const a = s0.field[i].c, b = s0.field[j].c; if (i === j || !C[a].tun || C[b].tun || C[a].k !== 'm' || C[b].k !== 'm' || C[a].lv + C[b].lv !== 8) continue;
       const k = a + '+' + b; if (seen[k]) continue; seen[k] = 1;
-      const s = clone(s0); const hi = Math.max(i, j), lo = Math.min(i, j); s.field.splice(hi, 1); s.field.splice(lo, 1); toGY(s, a); toGY(s, b); s.extra.EDD--; s.field.push({ c: 'EDD', z: freeX(s) }); s.nfx = true;
+      const s = clone(s0); const hi = Math.max(i, j), lo = Math.min(i, j); s.field.splice(hi, 1); s.field.splice(lo, 1); toGY(s, a); toGY(s, b); s.extra.EDD--; s.field.push({ c: 'EDD', z: freeX(s) }); xsAdd(s, 'EDD'); s.nfx = true;
       push(s, N.EDD + ' 싱크로 소환', N[a] + '(레벨 4 튜너) + ' + N[b] + '(레벨 4)', '레벨 8 싱크로', 'b');
     }
   }
@@ -346,7 +348,7 @@ function moves(s0) {
   if (canExtra(s0, 'LEN')) { const seen = {};
     for (let i = 0; i < s0.field.length; i++) for (let j = 0; j < s0.field.length; j++) {
       const a = s0.field[i].c, b = s0.field[j].c; if (i === j || !AL(a) || C[b].r !== 'D' || C[b].nomat) continue; const k = a + '+' + b; if (seen[k] || seen[b + '+' + a]) continue; seen[k] = 1;
-      const s = clone(s0); const hi = Math.max(i, j), lo = Math.min(i, j); s.field.splice(hi, 1); s.field.splice(lo, 1); toGY(s, a); toGY(s, b); s.extra.LEN--; s.field.push({ c: 'LEN', z: freeX(s) });
+      const s = clone(s0); const hi = Math.max(i, j), lo = Math.min(i, j); s.field.splice(hi, 1); s.field.splice(lo, 1); toGY(s, a); toGY(s, b); s.extra.LEN--; s.field.push({ c: 'LEN', z: freeX(s) }); xsAdd(s, 'LEN');
       push(s, N.LEN + ' 특수 소환', '필드의 ' + N[a] + ' + ' + N[b] + '(드래곤족)를 묘지로 보냄', '융합 카드 없이 엑스트라 덱에서 특수 소환', 'b');
     }
   }
@@ -354,7 +356,7 @@ function moves(s0) {
   if (canExtra(s0, 'LUW')) { const seen = {};
     for (let i = 0; i < s0.field.length; i++) for (let j = 0; j < s0.field.length; j++) {
       const a = s0.field[i].c, b = s0.field[j].c; if (i === j || !C[a].tun || C[a].k !== 'm' || C[b].tun || C[b].lv !== 8 || C[b].x === 'link') continue; const k = a + '+' + b; if (seen[k]) continue; seen[k] = 1;
-      const s = clone(s0); const hi = Math.max(i, j), lo = Math.min(i, j); s.field.splice(hi, 1); s.field.splice(lo, 1); toGY(s, a); toGY(s, b); s.extra.LUW--; s.field.push({ c: 'LUW', z: freeX(s) }); s.nfx = true;
+      const s = clone(s0); const hi = Math.max(i, j), lo = Math.min(i, j); s.field.splice(hi, 1); s.field.splice(lo, 1); toGY(s, a); toGY(s, b); s.extra.LUW--; s.field.push({ c: 'LUW', z: freeX(s) }); xsAdd(s, 'LUW'); s.nfx = true;
       push(s, N.LUW + ' 싱크로 소환', N[a] + '(레벨 4 튜너) + ' + N[b] + '(레벨 8)', '레벨 12 싱크로', 'b');
     }
   }
@@ -508,7 +510,7 @@ function initState(hand, main, extra, ban, nos) {
   const h = [];
   for (const n of hand) { const c = n === '패의 드래곤테일 이외 몬스터' ? 'X' : CODE[n]; if (!c) continue; h.push(c); if (c !== 'X') { if (!(deck[c] > 0)) return null; deck[c]--; } }
   RES = {}; for (const n of (ban || [])) { const c = CODE[n]; if (!c) continue; if (C[c].k === 'x') { if (ex[c] > 0) { RES[c] = ex[c]; delete ex[c]; } } else delete deck[c]; }
-  return { hand: h, deck, extra: ex, field: [], st: [], gy: [], ban: [], used: [], lockF: false, lock8: false, noSS: false, noEX: false, ns: false, nfx: false, fgy: false, albgy: false, titgy: false, eddb: false, pend: [] };
+  return { hand: h, deck, extra: ex, field: [], st: [], gy: [], ban: [], xs: [], used: [], lockF: false, lock8: false, noSS: false, noEX: false, ns: false, nfx: false, fgy: false, albgy: false, titgy: false, eddb: false, pend: [] };
 }
 function boardKey(s) { return s.field.map(m => m.c).sort().join(',') + '|' + s.st.map(m => m.c).sort().join(',') + '|' + s.hand.slice().sort().join(','); }
 // opts: {maxStates, maxMs, onProgress}
@@ -520,7 +522,7 @@ function search(hand, main, extra, opts) {
   const NP = new Int32Array(maxStates + 2), NM = new Uint16Array(maxStates + 2); let nn = 1; // 부모 포인터 + 부모의 moves() 안에서 몇 번째 수인지
   let frontier = [{ s: s0, id: 0 }]; const seen = new Set([hkey(s0)]); const boards = new Map(); let done = true, depth = 0;
   const consider = (s, id, d) => {
-    if (s.pend.length) return; const ep = endPhase(s); const bk = boardKey(ep.s) + (grp ? '#' + usedOf(ep.s).join(',') : ''); const ev = evaluate(ep.s);
+    if (s.pend.length) return; const ep = endPhase(s); const bk = boardKey(ep.s) + (grp ? '#' + usedOf(ep.s).join(',') + '~' + ep.s.xs.join(',') : ''); const ev = evaluate(ep.s);
     const cur = boards.get(bk); if (!cur || d < cur.d) boards.set(bk, { id, d, ev });
   };
   consider(s0, 0, 0);
@@ -544,10 +546,10 @@ function search(hand, main, extra, opts) {
     const out = [];
     for (const [u, a] of G) {
       a.sort((p, q) => q.b.ev.length - p.b.ev.length || p.b.d - q.b.d);
-      const pick = new Set(a.slice(0, 5)); const ua = u ? u.split(',') : [];
+      const pick = new Set(a.slice(0, 5)); const u1 = u.split('~'), ua = u1[0] ? u1[0].split(',') : [], xa = u1[1] ? u1[1].split(',') : [];
       // 필드 구성이 다른 것도 조금 남긴다
       const seenF = new Set(); for (const x of a) { const fk = x.bk.split('|')[0]; if (!seenF.has(fk)) { seenF.add(fk); pick.add(x); if (seenF.size >= 8) break; } }
-      for (const x of pick) out.push({ u: ua, sc: x.b.ev.length, d: x.b.d, p: pathOf(x.b) });
+      for (const x of pick) out.push({ u: ua, x: xa, sc: x.b.ev.length, d: x.b.d, p: pathOf(x.b) });
     }
     return { groups: out, boards: boards.size, states: seen.size, done, ms: Date.now() - t0 };
   }
