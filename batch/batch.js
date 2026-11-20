@@ -26,15 +26,26 @@ if (process.argv.includes('--one')) {
   const r = DTE.search(svCanon(all[i]), CF.main, CF.extra, { group: true, optMain: CF.om, maxMs: ms * 1000, maxStates: st, ban: CF.ban, nos: CF.nos });
   fs.writeFileSync(of, JSON.stringify(r)); process.exit(0);
 }
-const mine = all.map((h, i) => [h, i]).filter((_, i) => i % nsh === shard);
+// --redo <폴더>: 이미 끝까지 탐색한 손패는 빼고, 덜 끝난 것만 다시 계산한다
+let targets = all.map((h, i) => [h, i]);
+const prev = {};
+if (process.argv.includes('--redo')) {
+  const dir = process.argv[process.argv.indexOf('--redo') + 1];
+  for (const fn of fs.readdirSync(dir).filter(x => /^gh-.*-p\d+\.gz$/.test(x))) for (const [k, v] of JSON.parse(zlib.gunzipSync(fs.readFileSync(path.join(dir, fn)))).items) if (k.startsWith('B|')) prev[k] = { complete: v.complete, states: v.states };
+  targets = targets.filter(([h]) => { const v = prev['B|' + cfg + '|' + svHK(h)]; return !(v && v.complete); });
+  console.log('다시 계산할 손패', targets.length);
+}
+const mine = targets.filter((_, i) => i % nsh === shard);
 const items = [], hands = {}; const t0 = Date.now(); const tmp = path.join(os.tmpdir(), 'one-' + shard + '-' + process.pid + '.json');
-const runOne = (i, ms, st) => { try { fs.unlinkSync(tmp); } catch (e) { } const p = spawnSync(process.execPath, ['--max-old-space-size=4800', __filename, String(shard), String(nsh), 'x', cfgFile, '--one', String(i), String(ms), String(st), tmp], { stdio: 'ignore' }); if (p.status !== 0 || !fs.existsSync(tmp)) return null; return JSON.parse(fs.readFileSync(tmp, 'utf8')); };
+const runOne = (i, ms, st) => { try { fs.unlinkSync(tmp); } catch (e) { } const p = spawnSync(process.execPath, ['--max-old-space-size=' + (process.env.HEAP || '4800'), __filename, String(shard), String(nsh), 'x', cfgFile, '--one', String(i), String(ms), String(st), tmp], { stdio: 'ignore' }); if (p.status !== 0 || !fs.existsSync(tmp)) return null; return JSON.parse(fs.readFileSync(tmp, 'utf8')); };
 for (let k = 0; k < mine.length; k++) {
   const [hand, gi] = mine[k], ch = svCanon(hand);
   let r = runOne(gi, CF.lim, MAXS), lim = CF.lim, note = '';
+  if (!r && process.env.HEAP) { r = runOne(gi, CF.lim, Math.round(MAXS * 0.65)); note = ' · 국면 한도를 줄여 재시도'; }
   if (!r) { r = runOne(gi, 180, 3000000); lim = 180; note = ' · 메모리 부족으로 줄여서 재시도'; }
+  const old = prev['B|' + cfg + '|' + svHK(hand)]; if (old && r && !r.error && !r.done && r.states <= old.states) { console.log('유지', ch.join(' + ')); continue; }
   if (!r || r.error) { console.log('skip', ch.join(' + '), r ? r.error : '실패'); continue; }
-  items.push(['B|' + cfg + '|' + svHK(hand), { hand: ch, groups: r.groups, complete: r.done, lim, states: r.states, ms: r.ms }]);
+  items.push(['B|' + cfg + '|' + svHK(hand), { hand: ch, groups: r.groups, complete: r.done, lim, states: r.states, ms: r.ms, gi }]);
   const best = {}; for (const x of r.groups) { const u = x.u.join(','); if (!(best[u] >= x.sc)) best[u] = x.sc; }
   hands[svHK(hand)] = { h: ch, g: Object.entries(best), c: r.done, lim };
   console.log(`[${shard}/${nsh}] ${k + 1}/${mine.length} ${ch.join(' + ')} · ${r.states} 국면 · ${(r.ms / 1000).toFixed(1)}s${r.done ? '' : ' · 한도'}${note} · 누적 ${((Date.now() - t0) / 60000).toFixed(1)}분`);
