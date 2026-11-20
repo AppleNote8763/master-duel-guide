@@ -1,0 +1,62 @@
+name: 일괄 계산
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['batch/run.txt']
+permissions:
+  contents: write
+concurrency:
+  group: batch
+  cancel-in-progress: true
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      matrix:
+        part: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: 계산 (한 대에서 조각 3개 동시)
+        run: |
+          mkdir -p out
+          for k in 0 1 2; do
+            s=$(( ${{ matrix.part }} * 3 + k ))
+            node --max-old-space-size=4500 batch/batch.js $s 60 out/p$(printf '%02d' $s).json.gz > out/log$s.txt 2>&1 &
+          done
+          wait
+          tail -n 3 out/log*.txt
+          ls -la out
+      - uses: actions/upload-artifact@v4
+        with:
+          name: part-${{ matrix.part }}
+          path: out/*.json.gz
+          retention-days: 7
+  collect:
+    needs: solve
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          path: parts
+          merge-multiple: true
+      - name: 사이트 폴더로 옮기고 올리기
+        run: |
+          mkdir -p site/batch
+          node batch/collect.js parts site/batch
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add site/batch
+          git diff --cached --quiet || git commit -m "일괄 계산 결과 갱신"
+          git pull --rebase origin main
+          git push origin HEAD:main
