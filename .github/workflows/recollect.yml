@@ -1,0 +1,37 @@
+name: 다시 계산 결과만 합치기
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['batch/recollect.txt']
+permissions:
+  contents: write
+  actions: read
+jobs:
+  recollect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: 실행 번호 읽기
+        id: run
+        run: echo "id=$(head -n 1 batch/recollect.txt | tr -dc '0-9')" >> "$GITHUB_OUTPUT"
+      - uses: actions/download-artifact@v4
+        with:
+          path: parts
+          pattern: redo-*
+          merge-multiple: true
+          run-id: ${{ steps.run.outputs.id }}
+          github-token: ${{ github.token }}
+      - name: 기존 조각에 합쳐 올리기
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ls -la parts | head -50
+          du -sh parts
+          free -g | sed -n 2p
+          bash batch/data-put.sh node --max-old-space-size=12000 batch/merge.js parts pub/batch

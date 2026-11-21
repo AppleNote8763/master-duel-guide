@@ -72,4 +72,4 @@ jobs:
       - name: 기존 조각에 합쳐 올리기
         env:
           GH_TOKEN: ${{ github.token }}
-        run: bash batch/data-put.sh node batch/merge.js parts pub/batch
+        run: bash batch/data-put.sh node --max-old-space-size=12000 batch/merge.js parts pub/batch
